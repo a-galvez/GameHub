@@ -1,1 +1,2 @@
-# HabitForge
+# GameHub
+Catálogo de videojuegos con reseñas
