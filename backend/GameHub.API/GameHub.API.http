@@ -1,6 +1,28 @@
-@GameHub.API_HostAddress = http://localhost:5055
+@host = http://localhost:5055
 
-GET {{GameHub.API_HostAddress}}/weatherforecast/
+### Obtener juego por id (200 OK)
+GET {{host}}/api/juegos/1
 Accept: application/json
 
-###
+### Obtener juego inexistente (404 Not Found)
+GET {{host}}/api/juegos/9999
+Accept: application/json
+
+### Actualizar juego (204 No Content)
+PUT {{host}}/api/juegos/1
+Content-Type: application/json
+
+{
+  "titulo": "The Legend of Zelda: Tears of the Kingdom"
+}
+
+### Actualizar con datos inválidos (400 Bad Request)
+PUT {{host}}/api/juegos/1
+Content-Type: application/json
+
+{
+  "titulo": ""
+}
+
+### Eliminar juego (204 No Content)
+DELETE {{host}}/api/juegos/1

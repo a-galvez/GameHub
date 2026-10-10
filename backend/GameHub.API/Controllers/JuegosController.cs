@@ -10,11 +10,14 @@ namespace GameHub.API.Controllers;
 [Route("api/[controller]")]
 public class JuegosController : ControllerBase {
     private readonly IJuegoRepository _repository;
-    private readonly IValidator<CreateJuegoRequestDto> _validator;
+    private readonly IValidator<CreateJuegoRequestDto> _createValidator;
 
-    public JuegosController(IJuegoRepository repository, IValidator<CreateJuegoRequestDto> validator) {
+    private readonly IValidator<UpdateJuegoRequestDto> _updateValidator;
+
+    public JuegosController(IJuegoRepository repository, IValidator<CreateJuegoRequestDto> createValidator, IValidator<UpdateJuegoRequestDto> updateValidator) {
         _repository = repository;
-        _validator = validator;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
     [HttpGet]
@@ -39,7 +42,7 @@ public class JuegosController : ControllerBase {
     [HttpPost]
     public async Task<IActionResult> CrearJuego([FromBody] CreateJuegoRequestDto request) {
         // 1. Ejecutar FluentValidation
-        var validationResult = await _validator.ValidateAsync(request);
+        var validationResult = await _createValidator.ValidateAsync(request);
         if (!validationResult.IsValid) {
             return BadRequest(validationResult.Errors); // HTTP 400 automático con detalles
         }
@@ -72,4 +75,58 @@ public class JuegosController : ControllerBase {
 
         return CreatedAtAction(nameof(GetJuegos), new { id = response.Id }, response);
     }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetJuego(int id)
+    {
+        var juegoEncontrado = await _repository.GetByIdAsync(id);
+        if (juegoEncontrado is null)
+            return NotFound();
+        
+        var response = new JuegoResponseDto {
+            Id = juegoEncontrado.Id,
+            Titulo = juegoEncontrado.Titulo,
+            Descripcion = juegoEncontrado.Descripcion,
+            FechaLanzamiento = juegoEncontrado.FechaLanzamiento,
+            Desarrollador = juegoEncontrado.Desarrollador,
+            Distribuidor = juegoEncontrado.Distribuidor,
+            Plataforma = juegoEncontrado.Plataforma,
+            PortadaUrl = juegoEncontrado.PortadaUrl
+        };
+
+        return Ok(response);
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> ActualizarJuego(int id, [FromBody] UpdateJuegoRequestDto request)
+    {
+        var validationResult = await _updateValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+        var juego = await _repository.GetByIdAsync(id);
+        if (juego is null)
+            return NotFound();
+
+        if (request.Titulo is not null) juego.Titulo = request.Titulo;
+        if (request.Descripcion is not null) juego.Descripcion = request.Descripcion;
+        if (request.FechaLanzamiento is not null) juego.FechaLanzamiento = request.FechaLanzamiento.Value;
+        if (request.Desarrollador is not null) juego.Desarrollador = request.Desarrollador;
+        if (request.Distribuidor is not null) juego.Distribuidor = request.Distribuidor;
+        if (request.Plataforma is not null) juego.Plataforma = request.Plataforma;
+        if (request.PortadaUrl is not null) juego.PortadaUrl = request.PortadaUrl;
+
+        await _repository.UpdateAsync(juego);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> EliminarJuego(int id) {
+        var juegoEliminado = await _repository.DeleteAsync(id);
+        if (!juegoEliminado)
+            return NotFound();
+
+        return NoContent();
+    }
+    
 }

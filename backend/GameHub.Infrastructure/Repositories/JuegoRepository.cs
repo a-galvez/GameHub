@@ -25,5 +25,27 @@ public class JuegoRepository : IJuegoRepository {
         
         return juego;
     }
-    
+
+    public async Task<Juego?> GetByIdAsync(int id)
+    {
+        return await _context.Juegos.FindAsync(id);
+    }
+
+    public async Task UpdateAsync(Juego juego)
+    {
+        _context.Juegos.Update(juego);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var juegoBorrar = await _context.Juegos.FindAsync(id);
+        if (juegoBorrar is null)
+            return false;
+
+        _context.Juegos.Remove(juegoBorrar);
+        await _context.SaveChangesAsync();
+
+        return true;
+    }
 }
