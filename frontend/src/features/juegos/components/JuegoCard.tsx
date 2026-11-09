@@ -1,6 +1,11 @@
 import type { Juego } from '../types/juego.types'
 
-export function JuegoCard({ id, titulo, descripcion, fechaLanzamiento, desarrollador, distribuidor, plataforma, portadaUrl  }: Juego) {
+interface JuegoCardProps extends Juego {
+    onEditar: (id: number) => void
+    onEliminar: (id: number) => void
+}
+
+export function JuegoCard({ id, titulo, descripcion, fechaLanzamiento, desarrollador, distribuidor, plataforma, portadaUrl, onEditar, onEliminar}: JuegoCardProps) {
     
     return (
         <article className="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col justify-between hover:border-indigo-500 transition-colors shadow-sm">
@@ -33,10 +38,25 @@ export function JuegoCard({ id, titulo, descripcion, fechaLanzamiento, desarroll
                En la Unidad 3, cuando tengamos sistema de Usuarios (IAM), 
                este botón llamará a la tabla transaccional para adoptar el hábito.
             */}
-            <button disabled 
-                className="w-full bg-slate-900/80 text-slate-400 text-sm font-medium py-2.5 px-4 rounded-lg cursor-not-allowed border border-slate-700">
-                Crear Reseña (Requiere Sesión)
-            </button>
+            <div className="flex flex-col gap-3">
+                <button disabled 
+                    className="w-full bg-slate-900/80 text-slate-400 hover:bg-slate-700 text-sm font-medium py-2.5 px-4 rounded-lg cursor-not-allowed border border-slate-700">
+                    Crear Reseña (Requiere Sesión)
+                </button>
+
+                <button 
+                    onClick={() => onEditar(id)} 
+                    className="w-full bg-cyan-950 text-slate-400 hover:bg-cyan-700 text-sm font-medium py-2.5 px-4 cursor-pointer rounded-lg border border-slate-700">
+                    Editar
+                </button>
+
+                <button  
+                    onClick={() => onEliminar(id)} 
+                    className="w-full bg-red-950 text-slate-400 hover:bg-red-700 text-sm font-medium py-2.5 px-4 cursor-pointer rounded-lg border border-slate-700">
+                    Eliminar
+                </button>
+
+            </div>
         </article>
     );
 }

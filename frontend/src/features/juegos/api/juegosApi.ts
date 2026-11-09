@@ -1,42 +1,93 @@
-import type { Juego } from '../types/juego.types'
+import axios from 'axios'
+import type { Juego, CrearJuegoDto, FluentValidationError, EditarJuegoDto } from '../types/juego.types'
 
-// Función asíncrona que retorna una Promesa con el arreglo de hábitos
-export const obtenerJuegosAsync = (): Promise<Juego[]> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-                  const datosCatalogo: Juego[] = [
-                  {
-                    id: 1,
-                    titulo: 'Red Dead Redemption 2',
-                    descripcion: 'Aventura de acción y mundo abierto ambientada en el viejo oeste estadounidense, donde Arthur Morgan y la banda de Van der Linde luchan por sobrevivir.',
-                    fechaLanzamiento: new Date('2018-10-26'),
-                    desarrollador: 'Rockstar Studios',
-                    distribuidor: 'Rockstar Games',
-                    plataforma: 'PC, PlayStation 4, Xbox One',
-                    portadaUrl: 'https://upload.wikimedia.org/wikipedia/en/4/44/Red_Dead_Redemption_II.jpg'
-                  },
-                  {
-                    id: 2,
-                    titulo: 'Hades',
-                    descripcion: 'Videojuego roguelike de acción en el que Zagreus, hijo de Hades, intenta escapar del inframundo griego.',
-                    fechaLanzamiento: new Date('2020-09-17'),
-                    desarrollador: 'Supergiant Games',
-                    distribuidor: 'Supergiant Games',
-                    plataforma: 'PC, Nintendo Switch, PlayStation 4, PlayStation 5, Xbox One, Xbox Series X/S',
-                    portadaUrl: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Hades_cover_art.jpg'
-                  },
-                  {
-                    id: 3,
-                    titulo: 'Stardew Valley',
-                    descripcion: 'Simulador de granja RPG donde puedes cultivar, criar animales, explorar minas, pescar y relacionarte con los habitantes de Pueblo Pelícano.',
-                    fechaLanzamiento: new Date('2016-02-26'),
-                    desarrollador: 'ConcernedApe',
-                    distribuidor: 'ConcernedApe',
-                    plataforma: 'PC, Nintendo Switch, PlayStation 4, Xbox One, Android, iOS',
-                    portadaUrl: 'https://upload.wikimedia.org/wikipedia/en/f/fd/Logo_of_Stardew_Valley.png'
-                  },
-                ]
-            resolve(datosCatalogo)
-        }, 1000)
-    })
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+
+if (!API_BASE_URL) {
+    console.error('ERROR CRÍTICO: No se detectó VITE_API_BASE_URL en frontend/.env')
+}
+
+export const apiClient = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+})
+
+// 1. Endpoint GET: Obtener todo el catálogo
+export const obtenerJuegosAsync = async (): Promise<Juego[]> => {
+    const respuesta = await apiClient.get<Juego[]>('/juegos')
+
+    if (!Array.isArray(respuesta.data)) {
+        throw new Error('La respuesta recibida no es un arreglo JSON válido.')
+    }
+
+    return respuesta.data
+}
+
+export const obtenerJuegoAsync = async (idJuego: number): Promise<Juego> => {
+    const respuesta = await apiClient.get<Juego>(`/juegos/${idJuego}`)
+    return respuesta.data
+}
+
+export const crearJuegoAsync = async (nuevoJuego: CrearJuegoDto): Promise<Juego> => {
+    const respuesta = await apiClient.post<Juego>('/juegos', nuevoJuego)
+    return respuesta.data
+}
+
+export const editarJuegoAsync = async (idJuego: number, nuevoJuego: EditarJuegoDto): Promise<void> => {
+    await apiClient.put(`/juegos/${idJuego}`, nuevoJuego)
+}
+
+export const eliminarJuegoAsync = async (id: number): Promise<void> => {
+    await apiClient.delete(`/juegos/${id}`)
+}
+
+export const extraerMensajeErrorBackend = (error: unknown): string => {
+    if (axios.isAxiosError(error)) {
+        // Caso A: El servidor .NET está apagado o el navegador bloqueó por CORS
+        if (!error.response) {
+            return 'Sin respuesta del servidor (.NET apagado o bloqueo de seguridad CORS en el navegador).'
+        }
+
+        const status = error.response.status
+        const data = error.response.data
+
+        // Caso B: Arreglo de errores devuelto por FluentValidation en .NET -> [ { propertyName, errorMessage }, ... ]
+        if (Array.isArray(data)) {
+            const erroresFluent = (data as FluentValidationError[])
+                .map((item) => item?.errorMessage)
+                .filter((msg): msg is string => typeof msg === 'string' && msg.trim().length > 0)
+
+            if (erroresFluent.length > 0) {
+                return `[HTTP ${status}] ${erroresFluent.join(' | ')}`
+            }
+        }
+
+        // Caso C: El controlador de .NET devolvió un string directo -> BadRequest("Mensaje...")
+        if (typeof data === 'string' && data.trim().length > 0) {
+            return `[HTTP ${status}] ${data}`
+        }
+
+        // Caso D: El servidor devolvió un objeto JSON (ProblemDetails o { error / mensaje })
+        if (data && typeof data === 'object') {
+            const obj = data as Record<string, unknown>
+
+            if ('errors' in obj && obj.errors && typeof obj.errors === 'object') {
+                const listaErrores = Object.values(obj.errors as Record<string, string[]>).flat()
+                if (listaErrores.length > 0) {
+                    return `[HTTP ${status}] ${listaErrores.join(' | ')}`
+                }
+            }
+
+            const mensajeExplicito = obj.error || obj.mensaje || obj.message || obj.detail || obj.title
+            if (typeof mensajeExplicito === 'string' && mensajeExplicito.trim().length > 0) {
+                return `[HTTP ${status}] ${mensajeExplicito}`
+            }
+        }
+
+        return `[HTTP ${status}] El servidor .NET rechazó la operación.`
+    }
+
+    return error instanceof Error ? error.message : 'Error inesperado en la aplicación.'
 }

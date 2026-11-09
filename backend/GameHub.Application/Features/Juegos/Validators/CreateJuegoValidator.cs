@@ -19,7 +19,7 @@ public class CreateJuegoValidator : AbstractValidator<CreateJuegoRequestDto> {
             .NotEmpty().MaximumLength(100);
 
         RuleFor(x => x.Plataforma)
-            .NotEmpty().MaximumLength(50);
+            .NotEmpty().MaximumLength(100);
 
         RuleFor(x => x.PortadaUrl)
             .Must(url => Uri.TryCreate(url, UriKind.Absolute, out _))

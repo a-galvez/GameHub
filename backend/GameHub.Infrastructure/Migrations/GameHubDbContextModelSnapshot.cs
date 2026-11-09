@@ -63,8 +63,8 @@ namespace GameHub.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("FechaLanzamiento")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly?>("FechaLanzamiento")
+                        .HasColumnType("date");
 
                     b.Property<string>("Plataforma")
                         .IsRequired()
